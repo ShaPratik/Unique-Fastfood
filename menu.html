@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Our Menu</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-gray-100">
+
+    <div id="menu-view" class="w-full max-w-lg mx-auto bg-white min-h-screen shadow-2xl">
+        <header class="bg-gray-800 text-white p-4 text-center sticky top-0 z-10 shadow-lg">
+            <h1 class="text-3xl font-bold">Our Menu</h1>
+            <p id="counter-display" class="text-md text-gray-300 font-semibold mt-1">Welcome!</p>
+        </header>
+
+        <main id="menu-items" class="p-4 space-y-3 pb-48">
+            <!-- Menu items will be generated here by JavaScript -->
+        </main>
+        
+        <footer class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 max-w-lg mx-auto shadow-inner">
+             <div id="cart-summary" class="text-lg font-semibold mb-3 text-center text-gray-700">
+                Your cart is empty.
+             </div>
+             <button id="place-order-btn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-4 rounded-xl text-xl shadow-lg transition-transform transform hover:scale-105 disabled:bg-gray-400 disabled:cursor-not-allowed" disabled>
+                Place Your Order
+             </button>
+        </footer>
+    </div>
+    
+    <div id="confirmation-modal" class="hidden fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-2xl p-8 text-center shadow-xl transform transition-all scale-95 opacity-0">
+            <svg class="w-20 h-20 text-green-500 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            <h2 class="text-3xl font-bold text-gray-800 mb-2">Order Placed!</h2>
+            <p id="modal-counter-text" class="text-gray-600 text-lg mb-6"></p>
+            <p class="text-gray-600 text-lg">Thank you!</p>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const menu = [
+                { id: 1, name: 'Dry Manchurian', price: 120 },
+                { id: 2, name: 'Gravy Manchurian', price: 140 },
+                { id: 3, name: 'Manchurian Rice', price: 160 },
+                { id: 4, name: 'Pav Bhaji', price: 100 },
+                { id: 5, name: 'Pulav', price: 110 },
+                { id: 6, name: 'Pani Puri', price: 50 },
+                { id: 7, name: 'Bhel', price: 60 },
+            ];
+            let cart = {};
+
+            const urlParams = new URLSearchParams(window.location.search);
+            const counterNumber = urlParams.get('counter');
+
+            if (counterNumber) {
+                document.getElementById('counter-display').textContent = `Ordering From Counter #${counterNumber}`;
+            }
+
+            const menuItemsContainer = document.getElementById('menu-items');
+            menu.forEach(item => {
+                const itemElement = document.createElement('div');
+                itemElement.className = 'flex items-center justify-between bg-gray-50 p-4 rounded-lg shadow-sm';
+                itemElement.innerHTML = `
+                    <div>
+                        <p class="font-semibold text-lg text-gray-800">${item.name}</p>
+                        <p class="text-gray-600">₹${item.price.toFixed(2)}</p>
+                    </div>
+                    <div class="flex items-center space-x-3">
+                        <button data-id="${item.id}" class="remove-btn bg-red-200 text-red-700 font-bold w-10 h-10 rounded-full text-2xl flex items-center justify-center transition-transform transform hover:scale-110">-</button>
+                        <span id="quantity-${item.id}" class="font-bold text-xl w-10 text-center">0</span>
+                        <button data-id="${item.id}" class="add-btn bg-green-200 text-green-700 font-bold w-10 h-10 rounded-full text-2xl flex items-center justify-center transition-transform transform hover:scale-110">+</button>
+                    </div>
+                `;
+                menuItemsContainer.appendChild(itemElement);
+            });
+
+            menuItemsContainer.addEventListener('click', function(e) {
+                const id = e.target.dataset.id;
+                if (!id) return;
+
+                if (e.target.classList.contains('add-btn')) {
+                    cart[id] = (cart[id] || 0) + 1;
+                } else if (e.target.classList.contains('remove-btn')) {
+                    if (cart[id] > 0) {
+                        cart[id]--;
+                        if (cart[id] === 0) delete cart[id];
+                    }
+                }
+                updateCart();
+            });
+            
+            document.getElementById('place-order-btn').addEventListener('click', function() {
+                 console.log(`--- NEW ORDER from Counter #${counterNumber} ---`);
+                 Object.keys(cart).forEach(id => {
+                     const item = menu.find(m => m.id == id);
+                     console.log(`${cart[id]} x ${item.name}`);
+                 });
+                 showConfirmationModal(counterNumber);
+            });
+            
+            function updateCart() {
+                const cartSummary = document.getElementById('cart-summary');
+                const placeOrderBtn = document.getElementById('place-order-btn');
+                let totalItems = 0;
+                let totalPrice = 0;
+
+                menu.forEach(item => {
+                    document.getElementById(`quantity-${item.id}`).textContent = cart[item.id] || 0;
+                });
+
+                Object.keys(cart).forEach(id => {
+                    const item = menu.find(m => m.id == id);
+                    totalItems += cart[id];
+                    totalPrice += cart[id] * item.price;
+                });
+
+                if (totalItems > 0) {
+                    cartSummary.textContent = `Total: ₹${totalPrice.toFixed(2)} (${totalItems} items)`;
+                    placeOrderBtn.disabled = false;
+                } else {
+                    cartSummary.textContent = 'Your cart is empty.';
+                    placeOrderBtn.disabled = true;
+                }
+            }
+            
+            function showConfirmationModal(counterNum) {
+                const modal = document.getElementById('confirmation-modal');
+                const modalContent = modal.querySelector('div');
+                document.getElementById('modal-counter-text').textContent = `Your order will be served at Counter #${counterNum}.`;
+                
+                modal.classList.remove('hidden');
+                setTimeout(() => {
+                    modalContent.classList.remove('scale-95', 'opacity-0');
+                }, 10);
+
+                setTimeout(() => {
+                    modalContent.classList.add('scale-95', 'opacity-0');
+                    setTimeout(() => {
+                        modal.classList.add('hidden');
+                        cart = {};
+                        updateCart();
+                    }, 300);
+                }, 4000);
+            }
+        });
+    </script>
+</body>
+</html>
